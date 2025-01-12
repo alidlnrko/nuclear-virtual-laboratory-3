@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симуляция атома</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #3f51b5;
+            color: white;
+            padding: 20px;
+        }
+        main {
+            margin: 20px auto;
+        }
+        #canvas-container {
+            margin: 0 auto;
+            width: 600px;
+        }
+        .control {
+            margin: 10px;
+            padding: 10px;
+            background-color: #3f51b5;
+            color: white;
+            border-radius: 5px;
+        }
+        .output {
+            background-color: #f0f0f0;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Симуляция атома</h1>
+        <p>Взаимодействуйте с атомом, меняйте количество протонов, нейтронов и электронов. Узнайте заряд, массовое число и стабильность атома.</p>
+    </header>
+    <main>
+        <div id="canvas-container"></div>
+        <div class="control">
+            <label for="proton-number">Число протонов: </label>
+            <input type="number" id="proton-number" min="1" max="118" value="1" onchange="updateAtom()">
+            <br>
+            <label for="neutron-number">Число нейтронов: </label>
+            <input type="number" id="neutron-number" min="0" max="200" value="1" onchange="updateAtom()">
+            <br>
+            <label for="electron-number">Число электронов: </label>
+            <input type="number" id="electron-number" min="0" max="118" value="1" onchange="updateAtom()">
+            <br>
+        </div>
+
+        <div class="output">
+            <h3>Информация о атоме</h3>
+            <p><strong>Ионный заряд: </strong><span id="ion-charge">0</span></p>
+            <p><strong>Массовое число: </strong><span id="mass-number">0</span></p>
+            <p><strong>Стабильность: </strong><span id="stability">Неопределено</span></p>
+        </div>
+    </main>
+
+    <script>
+        let nucleus;
+        let electrons = [];
+        let protonNumber = 1;    // Начальное количество протонов (для водорода)
+        let neutronNumber = 1;   // Начальное количество нейтронов
+        let electronNumber = 1;  // Начальное количество электронов
+        let orbitalRadius = 100; // Начальный радиус орбиты
+
+        // Список элементов с их номерами (протоны)
+        const elements = {
+            1: "Водород (H)",
+            2: "Гелий (He)",
+            3: "Литий (Li)",
+            4: "Бериллий (Be)",
+            5: "Бор (B)",
+            6: "Углерод (C)",
+            7: "Азот (N)",
+            8: "Кислород (O)",
+            9: "Фтор (F)",
+            10: "Неон (Ne)",
+        };
+
+        function setup() {
+            const canvas = createCanvas(600, 400);
+            canvas.parent('canvas-container');
+            nucleus = {
+                x: width / 2,
+                y: height / 2,
+                size: 30 // Размер ядра
+            };
+            updateAtom();
+        }
+
+        function draw() {
+            background(240);
+
+            // Отображение ядра
+            fill(255, 100, 0); // Цвет ядра
+            ellipse(nucleus.x, nucleus.y, nucleus.size, nucleus.size);
+
+            // Отображение орбит
+            noFill();
+            stroke(150);
+            ellipse(nucleus.x, nucleus.y, orbitalRadius * 2, orbitalRadius * 2);
+
+            // Отображение электронов
+            for (let electron of electrons) {
+                electron.angle += electron.speed;
+                let electronX = nucleus.x + electron.radius * cos(electron.angle);
+                let electronY = nucleus.y + electron.radius * sin(electron.angle);
+
+                fill(0, 0, 255); // Цвет электрона
+                ellipse(electronX, electronY, 10, 10);
+            }
+
+            // Обновление радиуса орбиты для электронов
+            for (let electron of electrons) {
+                electron.radius = orbitalRadius;
+            }
+
+            // Отображение названия элемента
+            textSize(24);
+            fill(0);
+            textAlign(CENTER, CENTER);
+            text("Элемент: " + elements[protonNumber], width / 2, height - 60);
+        }
+
+        function addElectron() {
+            if (electrons.length < electronNumber) {  // Ограничим количество электронов
+                let newElectron = {
+                    radius: orbitalRadius,
+                    angle: random(TWO_PI),
+                    speed: random(0.02, 0.05) // Разные скорости для разных электронов
+                };
+                electrons.push(newElectron);
+            }
+        }
+
+        function updateAtom() {
+            protonNumber = parseInt(document.getElementById('proton-number').value);
+            neutronNumber = parseInt(document.getElementById('neutron-number').value);
+            electronNumber = parseInt(document.getElementById('electron-number').value);
+            electrons = []; // Сбросить электронов при изменении количества протонов
+            for (let i = 0; i < electronNumber; i++) {
+                addElectron();
+            }
+
+            updateInformation();
+        }
+
+        function updateInformation() {
+            // Массовое число
+            const massNumber = protonNumber + neutronNumber;
+            document.getElementById('mass-number').textContent = massNumber;
+
+            // Ионный заряд
+            const ionCharge = protonNumber - electronNumber;
+            document.getElementById('ion-charge').textContent = ionCharge;
+
+            // Стабильность (грубо: если нейтроны сильно превышают протоны, атом нестабилен)
+            let stability = "Стабилен";
+            if (neutronNumber > protonNumber * 1.5) {
+                stability = "Нестабилен (радиоактивен)";
+            }
+            document.getElementById('stability').textContent = stability;
+        }
+    </script>
+</body>
+</html>
